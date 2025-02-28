@@ -15,7 +15,7 @@ class Roles(models.Model):
 
 class CustomUsers(AbstractUser):
     
-    role = models.ForeignKey(Roles, on_delete=models.CASCADE, related_name='member_id', blank=True)
+    role = models.ForeignKey(Roles, on_delete=models.CASCADE, related_name='users', blank=True, null=True)
 
     # to fix conflicts of revers accessor while making migrations
     groups = models.ManyToManyField(Group, related_name='custom_users_groups', blank=True)

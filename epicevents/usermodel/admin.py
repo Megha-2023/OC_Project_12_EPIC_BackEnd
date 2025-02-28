@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from client.models import Client
+from contract.models import Contract
+from event.models import Event
 from .models import Roles, CustomUsers
 
 # Register your models here.
@@ -22,4 +24,7 @@ class CustomUsersAdmin(UserAdmin):
         ('Custom Fields', {'fields': ('role',)}),
     )
 
+
 admin.site.register(Client)
+admin.site.register(Contract)
+admin.site.register(Event)

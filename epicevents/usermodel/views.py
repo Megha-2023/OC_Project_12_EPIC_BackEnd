@@ -9,7 +9,6 @@ from rest_framework.views import APIView
 from .models import CustomUsers
 
 
-
 # Create your views here.
 class TeamLoginView(APIView):
     permission_classes = (AllowAny, )
@@ -38,14 +37,10 @@ class TeamLoginView(APIView):
             return Response({
                 "detail": "Invalid Credentials"
             }, status=status.HTTP_401_UNAUTHORIZED)
-        
+  
         refresh_token = RefreshToken.for_user(user)
         return Response({
                     'refresh_token': str(refresh_token),
                     'access': str(refresh_token.access_token)
                     }, status=status.HTTP_200_OK)
 
-        
-
-
-        

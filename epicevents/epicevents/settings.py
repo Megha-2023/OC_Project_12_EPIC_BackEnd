@@ -42,9 +42,11 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'usermodel',
     'client',
+    'contract',
+    'event',
 ]
 
-# AUTH_USER_MODEL = 'epicapi.Users'
+AUTH_USER_MODEL = 'usermodel.CustomUsers'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
