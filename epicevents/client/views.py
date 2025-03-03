@@ -2,7 +2,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from .permissions import IsClientOwner
+from usermodel.permissions import RoleBasedPermission
 from .models import Client
 from .serializers import ClientSerializer
 
@@ -10,10 +10,19 @@ from .serializers import ClientSerializer
 # Create your views here.
 class ClientViewSet(ModelViewSet):
     serializer_class = ClientSerializer
-    permission_classes = [IsAuthenticated, IsClientOwner]
+    permission_classes = [IsAuthenticated, RoleBasedPermission]
     
     def get_queryset(self):
-        return Client.objects.all()
+        queryset = Client.objects.all()
+        company_name = self.request.query_params.get('name', None)
+        client_email = self.request.query_params.get('email', None)
+
+        if company_name:
+            queryset = queryset.filter(company_name__icontains=company_name)
+        if client_email:
+            queryset = queryset.filter(email__iexact=client_email)
+        
+        return queryset
     
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
