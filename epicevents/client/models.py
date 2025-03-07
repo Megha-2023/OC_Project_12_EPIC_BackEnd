@@ -1,9 +1,13 @@
+""" Module contains Client Schema"""
+
 from django.db import models
 from usermodel.models import CustomUsers
 
 
 # Create your models here.
 class Client(models.Model):
+    """ Client model class"""
+
     CLIENT_STATUS_CHOICES = [
         ('Lead', 'Lead'),
         ('Active', 'Active'),
@@ -20,5 +24,5 @@ class Client(models.Model):
     date_updated = models.DateTimeField(auto_now=True)
     client_status = models.CharField(max_length=15, choices=CLIENT_STATUS_CHOICES, default='Lead')
 
-    # Sales member would be only one or multiple???????
+    # Sales member would be only one-one with client
     sales_contact = models.ForeignKey(CustomUsers, on_delete=models.CASCADE, related_name='client_sales_contact')

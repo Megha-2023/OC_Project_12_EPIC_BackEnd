@@ -1,11 +1,11 @@
+""" Module contains ViewSets classes for contract CRUD and search operations"""
+
 from rest_framework.viewsets import ModelViewSet
-from rest_framework.reverse import reverse
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from client.models import Client
-from client.views import ClientViewSet
 from event.models import Event
 from event.serializers import EventSerializer
 from usermodel.permissions import RoleBasedPermission
@@ -13,22 +13,50 @@ from usermodel.models import CustomUsers
 from .models import Contract
 from .serializers import ContractSerializer
 
+
 # Create your views here.
-class ContractViewSet(ModelViewSet):
+class SearchContractViewSet(ModelViewSet):
+    """ ViewSet for performing search operations """
+
     serializer_class = ContractSerializer
     permission_classes = [IsAuthenticated, RoleBasedPermission]
-    
+
+    def get_queryset(self):
+        queryset = Contract.objects.all()
+
+        company_name = self.request.query_params.get('company_name', None)
+        client_email = self.request.query_params.get('client_email', None)
+        contract_date = self.request.query_params.get('contract_date', None)
+        contract_amount = self.request.query_params.get('amount', None)
+
+        if company_name:
+            queryset = queryset.filter(client__company_name__icontains=company_name)
+        if client_email:
+            queryset = queryset.filter(client__email__iexact=client_email)
+        if contract_date:
+            queryset = queryset.filter(date_created__icontains=contract_date)
+        if contract_amount:
+            queryset = queryset.filter(amount=contract_amount)
+        return queryset
+
+
+class ContractViewSet(ModelViewSet):
+    """ View set for performing Contract CRUD operations"""
+
+    serializer_class = ContractSerializer
+    permission_classes = [IsAuthenticated, RoleBasedPermission]
+
     def get_object(self):
         try:
             return super().get_object()
         except Contract.DoesNotExist:
             return Response({"message": "Contract with given id does not exist"},
                             status=status.HTTP_404_NOT_FOUND)
-    
+
     def get_queryset(self):
         client_id = self.kwargs['client_id']
         return Contract.objects.filter(client__id=client_id)
-    
+
     def create(self, request, *args, **kwargs):
         client_id = kwargs.get('client_id')
         try:
@@ -36,7 +64,7 @@ class ContractViewSet(ModelViewSet):
         except Client.DoesNotExist:
             return Response({"message": "Client with given id does not exist"},
                             status=status.HTTP_404_NOT_FOUND)
-        
+
         data = request.data.copy()
         if client_obj.client_status == "Active":
             if request.user.role.role_name == "Management":
@@ -51,13 +79,11 @@ class ContractViewSet(ModelViewSet):
                 else:
                     return Response({"message": "Sales contact is required for Management Users."},
                                     status=status.HTTP_400_BAD_REQUEST)
-
             elif request.user.role.role_name == "Sales":
                 if client_obj.sales_contact != request.user:
                     return Response({"message": "You are not assigned to this client."},
                                     status=status.HTTP_403_FORBIDDEN)
                 data['sales_contact'] = request.user.id
-
             else:
                 return Response({"message": "You do not have permission to create contract."},
                                 status=status.HTTP_403_FORBIDDEN)
@@ -84,9 +110,8 @@ class ContractViewSet(ModelViewSet):
                             status=status.HTTP_404_NOT_FOUND)
 
         contract_obj = self.get_object()
-        
-        partial = True
 
+        partial = True
         serializer = self.get_serializer(contract_obj, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
 
@@ -111,14 +136,14 @@ class ContractViewSet(ModelViewSet):
                     "event": event_data
                 }, status=status.HTTP_200_OK)
         else:
-            return Response({"message": "Client Status is still 'Lead'. Please change it to 'Active'"},
+            return Response({"message": "Client Status is still 'Lead' Please change it to 'Active'"},
                             status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
         client_obj = self.get_object()
 
         if request.user != client_obj.sales_contact and request.user.role.role_name != 'Management':
-            return Response({"message": "You do not have permission to delete this contract, as you are not it's owner!"},
+            return Response({"message": "You do not have permission to delete this contract, you are not its owner!"},
                             status=status.HTTP_403_FORBIDDEN)
 
         super().destroy(request, *args, **kwargs)

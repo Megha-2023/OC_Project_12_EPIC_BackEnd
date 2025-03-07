@@ -1,3 +1,5 @@
+""" Module contains ViewSets classes for event CRUD and search operations"""
+
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -12,7 +14,30 @@ from .serializers import EventSerializer
 
 
 # Create your views here.
+class SerachEventViewSet(ModelViewSet):
+    """ ViewSet for performing search operations """
+
+    serializer_class = EventSerializer
+    permission_classes = [IsAuthenticated, RoleBasedPermission]
+
+    def get_queryset(self):
+        queryset = Event.objects.all()
+
+        company_name = self.request.query_params.get('company_name', None)
+        client_email = self.request.query_params.get('client_email', None)
+        event_date = self.request.query_params.get('event_date', None)
+
+        if company_name:
+            queryset = queryset.filter(contract__client__company_name__icontains=company_name)
+        if client_email:
+            queryset = queryset.filter(contract__client__email__iexact=client_email)
+        if event_date:
+            queryset = queryset.filter(event_date__icontains=event_date)
+        return queryset
+
+
 class EventViewSet(ModelViewSet):
+    """ View set for performing Event CRUD operations"""
     serializer_class = EventSerializer
     permission_classes = [IsAuthenticated, RoleBasedPermission]
 
@@ -27,20 +52,20 @@ class EventViewSet(ModelViewSet):
         contract_id = self.kwargs['contract_id']
         queryset = Event.objects.filter(contract__id=contract_id)
         return queryset
-    
+
     def create(self, request, *args, **kwargs):
         try:
             client_obj = kwargs.get('client_id')
         except Client.DoesNotExist:
             return Response({"message": "Client with given id does not exist"},
                             status=status.HTTP_404_NOT_FOUND)
-        
+
         try:
             contract_obj = kwargs.get('contract_id')
         except Contract.DoesNotExist:
             return Response({"message": "Contract with given id does not exist"},
                             status=status.HTTP_404_NOT_FOUND)
-        
+
         data = request.data.copy()
         if contract_obj.contract_status == "Signed":
             if request.user.role.role_name == "Management":
@@ -83,13 +108,13 @@ class EventViewSet(ModelViewSet):
         except Client.DoesNotExist:
             return Response({"message": "Client with given id does not exist"},
                             status=status.HTTP_404_NOT_FOUND)
-        
+
         try:
             contract_obj = Contract.objects.get(id=contract_id)
         except Contract.DoesNotExist:
             return Response({"message": "Contract with given id does not exist"},
                             status=status.HTTP_404_NOT_FOUND)
-        
+
         event_obj = self.get_object()
         if not event_obj.event_completed:
             partial = True
@@ -104,10 +129,10 @@ class EventViewSet(ModelViewSet):
             if support_member:
                 event_obj.support_contact = support_member
                 event_obj.save()
-            
+
             self.perform_update(serializer)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        
+
         return Response({"message": "Event is already completed"},
                         status=status.HTTP_400_BAD_REQUEST)
 
@@ -115,10 +140,11 @@ class EventViewSet(ModelViewSet):
         client_obj = self.get_object()
 
         if request.user != client_obj.sales_contact and request.user.role.role_name != 'Management':
-            return Response({"message": "You do not have permission to delete this event, as you are not it's owner!"},
+            return Response({"message": "You do not have permission to delete this event, you are not its owner!"},
                             status=status.HTTP_403_FORBIDDEN)
 
         super().destroy(request, *args, **kwargs)
         return Response({
                 'Message': 'Event has been deleted successfully'
-            }, status=status.HTTP_200_OK)        
+            }, status=status.HTTP_200_OK)
+    

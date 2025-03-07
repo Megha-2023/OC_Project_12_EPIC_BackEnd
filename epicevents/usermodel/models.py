@@ -1,12 +1,13 @@
-from django.db import models
+""" Module contains CustomUser and Roles Schema to store users informations"""
 
-# Create your models here.
+from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
 
 
 # Create your models here.
 class Roles(models.Model):
-    # role_id = models.AutoField(primary_key=True)
+    """ Role model class"""
+
     role_name = models.CharField(max_length=30)
 
     def __str__(self) -> str:
@@ -14,7 +15,8 @@ class Roles(models.Model):
 
 
 class CustomUsers(AbstractUser):
-    
+    """ User model class"""
+   
     role = models.ForeignKey(Roles, on_delete=models.CASCADE, related_name='users', blank=True, null=True)
 
     # to fix conflicts of revers accessor while making migrations

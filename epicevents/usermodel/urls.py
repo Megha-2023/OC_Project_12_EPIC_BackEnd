@@ -1,3 +1,5 @@
+""" Module contains login url endpoint"""
+
 from django.urls import path
 from .views import TeamLoginView
 
