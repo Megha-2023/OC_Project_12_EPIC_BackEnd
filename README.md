@@ -42,4 +42,4 @@ python manage.py runserver
 
 ### 6. Test all endpoints in Postman
 
-Once server is running, you can test all API endpoints in Postman app.
+Once server is running, you can test all API endpoints in Postman app. Documentation link of API endpoints: https://documenter.getpostman.com/view/38789497/2sAYkDMLC7

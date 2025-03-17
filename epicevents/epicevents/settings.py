@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 import datetime
 from pathlib import Path
 
@@ -27,7 +28,6 @@ SECRET_KEY = 'django-insecure-cixcv#*m6wtc^@(ly7x)vhk0by_&o%)cr5_$hd$7iplst%a-hz
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -66,8 +66,6 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': datetime.timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=1),
 }
-
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -113,7 +111,6 @@ DATABASES = {
     }
 }
 
-
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
@@ -154,3 +151,82 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{'
+        },
+    },
+    'handlers': {
+        'file': {  # app level error will be in epicevents_errors.log
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'epicevents_errors.log'),
+            'formatter': 'verbose',
+        },
+        'usermodel_file': {  # client app logs will be in usermodel.log
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'usermodel.log'),
+            'formatter': 'verbose',
+        },
+        'client_file': {  # client app logs will be in client.log
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'client.log'),
+            'formatter': 'verbose',
+        },
+        'contract_file': {  # client app logs will be in contract.log
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'contract.log'),
+            'formatter': 'verbose',
+        },
+        'event_file': {  # client app logs will be in event.log
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'event.log'),
+            'formatter': 'verbose',
+        },
+        'console': {  # console logging
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+        'usermodel': {
+            'handlers': ['console', 'usermodel_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'client': {
+            'handlers': ['console', 'client_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'contract': {
+            'handlers': ['console', 'contract_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'event': {
+            'handlers': ['console', 'event_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

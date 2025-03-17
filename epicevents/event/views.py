@@ -1,5 +1,6 @@
 """ Module contains ViewSets classes for event CRUD and search operations"""
 
+import logging
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -11,6 +12,8 @@ from usermodel.models import CustomUsers
 from contract.models import Contract
 from .models import Event
 from .serializers import EventSerializer
+
+logger = logging.getLogger("event")
 
 
 # Create your views here.
@@ -45,7 +48,9 @@ class EventViewSet(ModelViewSet):
         try:
             return super().get_object()
         except Event.DoesNotExist:
-            return Response({"message": "Event with given id does not exist"},
+            message = "Event with given id does not exist"
+            logger.error(message)
+            return Response({"error": message},
                             status=status.HTTP_404_NOT_FOUND)
 
     def get_queryset(self):
@@ -53,18 +58,30 @@ class EventViewSet(ModelViewSet):
         queryset = Event.objects.filter(contract__id=contract_id)
         return queryset
 
-    def create(self, request, *args, **kwargs):
+    def get_client_obj(self, client_id):
         try:
-            client_obj = kwargs.get('client_id')
+            client_obj = Client.objects.get(id=client_id)
         except Client.DoesNotExist:
-            return Response({"message": "Client with given id does not exist"},
+            message = "Client with given id does not exist"
+            logger.error(message)
+            return Response({"error": message},
                             status=status.HTTP_404_NOT_FOUND)
-
+        return client_obj
+    
+    def get_contract_obj(self, contract_id):
         try:
-            contract_obj = kwargs.get('contract_id')
+            contract_obj = Contract.objects.get(id=contract_id)
         except Contract.DoesNotExist:
-            return Response({"message": "Contract with given id does not exist"},
+            message = "Contract with given id does not exist"
+            logger.error(message)
+            return Response({"error": message},
                             status=status.HTTP_404_NOT_FOUND)
+        return contract_obj
+    
+
+    def create(self, request, *args, **kwargs):
+        client_obj = self.get_client_obj(kwargs.get('client_id'))
+        contract_obj = self.get_contract_obj(kwargs.get('contract_id'))
 
         data = request.data.copy()
         if contract_obj.contract_status == "Signed":
@@ -75,23 +92,32 @@ class EventViewSet(ModelViewSet):
                         support_contact = CustomUsers.objects.get(id=support_contact_id, role="Support")
                         data['support_contact'] = support_contact.id
                     except CustomUsers.DoesNotExist:
-                        return Response({"message": "Invalid Support contact ID."},
+                        message = "Invalid Support contact ID."
+                        logger.error(message)
+                        return Response({"error": message},
                                         status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response({"message": "Support contact is required for Management Users."},
+                    message = "Support contact is required for Management Users."
+                    logger.error(message)
+                    return Response({"error": message},
                                     status=status.HTTP_400_BAD_REQUEST)
             elif request.user.role.role_name == "Sales":
                 if client_obj.sales_contact != request.user:
-                    return Response({"message": "You are not assigned to this client."},
+                    message = "You are not assigned to this client."
+                    logger.error(message)
+                    return Response({"error": message},
                                     status=status.HTTP_403_FORBIDDEN)
             else:
-                return Response({"message": "You do not have permission to create event."},
+                message = "You do not have permission to create event."
+                logger.error(message)
+                return Response({"error": message},
                                 status=status.HTTP_403_FORBIDDEN)
 
             data['contract'] = contract_obj.id
             serializer = self.get_serializer(data=data)
             if serializer.is_valid():
                 serializer.save()
+                logger.info("Event created successfully !")
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
@@ -103,17 +129,9 @@ class EventViewSet(ModelViewSet):
 
     @action(detail=True, methods=['patch'], url_path="assign-support")
     def assign_support_member(self, request, client_id=None, contract_id=None, pk=None):
-        try:
-            client_obj = Client.objects.get(id=client_id)
-        except Client.DoesNotExist:
-            return Response({"message": "Client with given id does not exist"},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        try:
-            contract_obj = Contract.objects.get(id=contract_id)
-        except Contract.DoesNotExist:
-            return Response({"message": "Contract with given id does not exist"},
-                            status=status.HTTP_404_NOT_FOUND)
+        """ Function assign support member to an event by management team"""
+        client_obj = self.get_client_obj(client_id)
+        contract_obj = self.get_contract_obj(contract_id)
 
         event_obj = self.get_object()
         if not event_obj.event_completed:

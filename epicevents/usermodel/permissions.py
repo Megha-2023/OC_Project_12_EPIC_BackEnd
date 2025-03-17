@@ -15,7 +15,7 @@ class RoleBasedPermission(BasePermission):
         if request.method == 'GET':
             return True
 
-        if request.user.role.role_name == "Management":
+        if request.user.is_staff:
             return True
 
         return request.user.is_authenticated
@@ -24,10 +24,10 @@ class RoleBasedPermission(BasePermission):
         if request.method == 'GET':
             return True
 
-        if request.user.role.role_name == "Management":
+        if request.user.is_staff:
             return True
 
-        # Sales team cand edit clients and related contracts/events
+        # Sales team can edit clients and related contracts/events
         if request.user.role.role_name == "Sales":
             if hasattr(obj, "sales_contact") and obj.sales_contact == request.user:
                 return True

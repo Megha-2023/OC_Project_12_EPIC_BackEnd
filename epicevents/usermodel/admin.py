@@ -25,6 +25,22 @@ class CustomUsersAdmin(UserAdmin):
     )
 
 
-admin.site.register(Client)
-admin.site.register(Contract)
-admin.site.register(Event)
+@admin.register(Client)
+class ClientAdmin(admin.ModelAdmin):
+    list_display = ('id', 'email', 'company_name', 'client_status', 'sales_contact')
+
+@admin.register(Contract)
+class ContractAdmin(admin.ModelAdmin):
+    list_display = ('id', 'get_client_id', 'sales_contact', 'amount', 'date_created', 'contract_status')
+
+    def get_client_id(self, obj):
+        return obj.client.id
+
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    list_display = ('id', 'get_contract_id', 'support_contact', 'date_created',
+                    'event_date', 'event_completed')
+    
+    def get_contract_id(self, obj):
+        return obj.contract.id
+

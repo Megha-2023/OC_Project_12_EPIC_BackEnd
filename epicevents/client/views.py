@@ -1,5 +1,6 @@
 """ Module contains ClientViewSet class for client CRUD operations"""
 
+import logging
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -9,6 +10,10 @@ from usermodel.permissions import RoleBasedPermission
 from usermodel.models import CustomUsers
 from .models import Client
 from .serializers import ClientSerializer
+
+
+# app_logger = logging.getLogger("epicevents")
+logger = logging.getLogger("client")
 
 
 # Create your views here.
@@ -22,7 +27,9 @@ class ClientViewSet(ModelViewSet):
         try:
             return super().get_object()
         except Client.DoesNotExist:
-            return Response({"message": "Client with given id does not exist"},
+            message = "Client with given id does not exist"
+            logger.error(message)
+            return Response({"error": message},
                             status=status.HTTP_404_NOT_FOUND)
 
     def get_queryset(self):
@@ -46,21 +53,30 @@ class ClientViewSet(ModelViewSet):
                     sales_contact = CustomUsers.objects.get(id=sales_contact_id, role="Sales")
                     data['sales_contact'] = sales_contact.id
                 except CustomUsers.DoesNotExist:
-                    return Response({"message": "Invalid Sales contact ID."},
+                    message = "Invalid Sales contact ID."
+                    logger.error(message)
+                    return Response({"error": message},
                                     status=status.HTTP_400_BAD_REQUEST)
             else:
-                return Response({"message": "Sales contact is required for Management Users."},
+                message = "Sales contact is required for Management Users."
+                logger.error(message)
+                return Response({"error": message},
                                 status=status.HTTP_400_BAD_REQUEST)
         elif request.user.role.role_name == "Sales":
             data['sales_contact'] = request.user.id
         else:
-            return Response({"message": "You do not have permission to create contract."},
+            message = "You do not have permission to create contract."
+            logger.error
+            return Response({"error": message},
                             status=status.HTTP_403_FORBIDDEN)
 
         serializer = self.get_serializer(data=data)
         if serializer.is_valid():
             serializer.save()
+            logger.info("Client Created !")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        logger.error(str(serializer.errors))
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['patch'], url_path='activate-client')
@@ -68,8 +84,10 @@ class ClientViewSet(ModelViewSet):
         client_obj = self.get_object()
 
         if request.user != client_obj.sales_contact and request.user.role.role_name != 'Management':
+            message = "You do not have permission to update this client, you are not its owner!"
+            logger.error(message)
             return Response(
-                {"message": "You do not have permission to update this client, you are not its owner!"},
+                {"error": message},
                 status=status.HTTP_403_FORBIDDEN)
 
         partial = True
@@ -78,6 +96,7 @@ class ClientViewSet(ModelViewSet):
 
         if serializer.validated_data.get("client_status") == "Active" and client_obj.client_status != "Active":
             client_obj.client_status = "Active"
+            logger.info("Client status changed to 'Active'")
             client_obj.save()
 
         return Response({
@@ -89,12 +108,14 @@ class ClientViewSet(ModelViewSet):
         client_obj = self.get_object()
 
         if request.user != client_obj.sales_contact and request.user.role.role_name != 'Management':
+            message = "You do not have permission to delete this client, you are not its owner!"
+            logger.error(message)
             return Response(
-                {"message": "You do not have permission to delete this client, you are not its owner!"},
+                {"error": message},
                 status=status.HTTP_403_FORBIDDEN)
 
         super().destroy(request, *args, **kwargs)
+        logger.info("Client has been deleted successfully")
         return Response({
-                'Message': 'Client has been deleted successfully'
-            }, status=status.HTTP_200_OK)
-
+            "message": "Client has been deleted successfully"
+        }, status=status.HTTP_200_OK)
