@@ -83,6 +83,10 @@ class ClientViewSet(ModelViewSet):
     def activate_client(self, request, pk=None):
         client_obj = self.get_object()
 
+        # Send custom response if client does not exist
+        if isinstance(client_obj, Response):
+            return client_obj
+
         if request.user != client_obj.sales_contact and request.user.role.role_name != 'Management':
             message = "You do not have permission to update this client, you are not its owner!"
             logger.error(message)
@@ -94,18 +98,29 @@ class ClientViewSet(ModelViewSet):
         serializer = self.get_serializer(client_obj, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
 
-        if serializer.validated_data.get("client_status") == "Active" and client_obj.client_status != "Active":
-            client_obj.client_status = "Active"
-            logger.info("Client status changed to 'Active'")
-            client_obj.save()
+        if client_obj.client_status != "Active":
+            if serializer.validated_data.get("client_status") == "Active":
+                client_obj.client_status = "Active"
+                logger.info("Client status changed to 'Active'")
+                client_obj.save()
 
-        return Response({
-            "message": "Client status updated successfully",
-            "client": serializer.data
-        }, status=status.HTTP_200_OK)
+                return Response({
+                    "message": "Client status updated successfully",
+                    "client": serializer.data
+                }, status=status.HTTP_200_OK)
+        else:
+            message = "Client status is already set 'Active'"
+            logger.info(message)
+            return Response(
+                {"message": message},
+                status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
         client_obj = self.get_object()
+
+        # Send custom response if client does not exist
+        if isinstance(client_obj, Response):
+            return client_obj
 
         if request.user != client_obj.sales_contact and request.user.role.role_name != 'Management':
             message = "You do not have permission to delete this client, you are not its owner!"
@@ -114,7 +129,7 @@ class ClientViewSet(ModelViewSet):
                 {"error": message},
                 status=status.HTTP_403_FORBIDDEN)
 
-        super().destroy(request, *args, **kwargs)
+        self.perform_destroy(client_obj)
         logger.info("Client has been deleted successfully")
         return Response({
             "message": "Client has been deleted successfully"

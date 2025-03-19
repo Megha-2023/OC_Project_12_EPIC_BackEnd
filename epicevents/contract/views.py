@@ -1,6 +1,7 @@
 """ Module contains ViewSets classes for contract CRUD and search operations"""
 
 import logging
+from django.http import Http404
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -52,7 +53,7 @@ class ContractViewSet(ModelViewSet):
     def get_object(self):
         try:
             return super().get_object()
-        except Contract.DoesNotExist:
+        except Http404:
             message = "Contract with given id does not exist"
             logger.error(message)
             return Response({"error": message},
@@ -81,7 +82,8 @@ class ContractViewSet(ModelViewSet):
                 sales_contact_id = request.data.get('sales_contact')
                 if sales_contact_id:
                     try:
-                        sales_contact = CustomUsers.objects.get(id=sales_contact_id, role="Sales")
+                        sales_contact = CustomUsers.objects.get(id=sales_contact_id,
+                                                                role__role_name="Sales")
                         data['sales_contact'] = sales_contact.id 
                     except CustomUsers.DoesNotExist:
                         message = "Invalid Sales contact ID."
@@ -124,8 +126,16 @@ class ContractViewSet(ModelViewSet):
     def sign_contract(self, request, client_id=None, pk=None):
         """ Function for separte endpoint to sign contract"""
         client_obj = self.get_client_obj(client_id)
+
+        # Send custom response if client does not exist
+        if isinstance(client_obj, Response):
+            return client_obj
         
         contract_obj = self.get_object()
+
+        # Send custom response if contract does not exist
+        if isinstance(contract_obj, Response):
+            return contract_obj
 
         partial = True
         serializer = self.get_serializer(contract_obj, data=request.data, partial=partial)
@@ -159,7 +169,13 @@ class ContractViewSet(ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
+        client_obj = self.get_client_obj(kwargs.get('client_id'))
+        if isinstance(client_obj, Response):
+            return client_obj
+
         contract_obj = self.get_object()
+        if isinstance(contract_obj, Response):
+            return contract_obj
 
         if request.user != contract_obj.sales_contact and request.user.role.role_name != 'Management':
             message = "You do not have permission to delete this contract, you are not its owner!"
@@ -167,7 +183,7 @@ class ContractViewSet(ModelViewSet):
             return Response({"error": message},
                             status=status.HTTP_403_FORBIDDEN)
 
-        super().destroy(request, *args, **kwargs)
+        self.perform_destroy(contract_obj)
         logger.info("Contract has been deleted successfully")
         return Response({
                 "message": "Contract has been deleted successfully"

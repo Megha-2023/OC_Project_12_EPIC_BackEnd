@@ -1,0 +1,4 @@
+INFO 2025-03-19 16:30:18,393 views Contract created successfully !
+ERROR 2025-03-19 16:41:51,482 views Client with given id does not exist
+ERROR 2025-03-19 16:45:17,328 views Contract with given id does not exist
+INFO 2025-03-19 16:46:19,496 views Contract signed successfully !
